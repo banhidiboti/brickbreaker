@@ -1,56 +1,84 @@
-<template>
-  <div class="screen">
-    <div class="grid" />
+<script setup>
+import './WelcomeScreen.css'
 
-    <div class="content">
-      <div class="title-block">
-        <h1 class="title">BRICK<span class="accent">BREAKER</span></h1>
-        <p class="subtitle">retro arcade · neon edition</p>
+const emit = defineEmits(['start'])
+const startGame = () => emit('start')
+
+const BRICK_SCORING = [
+  { color: '#ff4466', label: 'Red',    points: 30 },
+  { color: '#ff7733', label: 'Orange', points: 25 },
+  { color: '#ffcc00', label: 'Yellow', points: 20 },
+  { color: '#44ff88', label: 'Green',  points: 15 },
+  { color: '#44ccff', label: 'Blue',   points: 10 },
+  { color: '#bb66ff', label: 'Purple', points:  5 },
+]
+</script>
+
+<template>
+  <div class="welcome-screen">
+    <div class="welcome-screen__grid" />
+
+    <div class="welcome-screen__content">
+      <div class="welcome-screen__title-block">
+        <h1 class="welcome-screen__title">
+          BRICK<span class="welcome-screen__title-accent">BREAKER</span>
+        </h1>
+        <p class="welcome-screen__subtitle">retro arcade · neon edition</p>
       </div>
 
-      <div class="how-to-play">
-        <h2 class="section-title">HOW TO PLAY</h2>
+      <div class="welcome-screen__how-to-play">
+        <h2 class="welcome-screen__section-title">HOW TO PLAY</h2>
 
-        <ul class="instructions">
+        <ul class="welcome-screen__instructions">
           <li>
-            <span class="key">A</span>
-            <span class="key">← Left</span>
-            <span class="desc">Move paddle left</span>
+            <span class="welcome-screen__key">A</span>
+            <span class="welcome-screen__key">← Left</span>
+            <span class="welcome-screen__desc">Move paddle left</span>
           </li>
           <li>
-            <span class="key">D</span>
-            <span class="key">→ Right</span>
-            <span class="desc">Move paddle right</span>
+            <span class="welcome-screen__key">D</span>
+            <span class="welcome-screen__key">→ Right</span>
+            <span class="welcome-screen__desc">Move paddle right</span>
           </li>
           <li>
-            <span class="key">SPACE</span>
-            <span class="key">ESC</span>
-            <span class="desc">Pause / Resume</span>
+            <span class="welcome-screen__key">SPACE</span>
+            <span class="welcome-screen__key">ESC</span>
+            <span class="welcome-screen__desc">Pause / Resume</span>
           </li>
         </ul>
 
-        <div class="rules">
-          <div class="rule">
-            <span class="rule-icon">💥</span>
+        <div class="welcome-screen__rules">
+          <div class="welcome-screen__rule">
+            <span class="welcome-screen__rule-icon">💥</span>
             <span>Break all bricks to win</span>
           </div>
-          <div class="rule">
-            <span class="rule-icon">♥</span>
+          <div class="welcome-screen__rule">
+            <span class="welcome-screen__rule-icon">♥</span>
             <span>You have 3 lives — don't let the ball fall!</span>
           </div>
-          <div class="rule">
-            <span class="rule-icon">🏆</span>
-            <span>Each brick is worth 10 points</span>
+          <div class="welcome-screen__rule welcome-screen__rule--scoring">
+            <span class="welcome-screen__rule-icon">🏆</span>
+            <div class="welcome-screen__scoring-grid">
+              <div
+                v-for="brick in BRICK_SCORING"
+                :key="brick.label"
+                class="welcome-screen__scoring-row"
+              >
+                <span
+                  class="welcome-screen__brick-preview"
+                  :style="{ background: brick.color, boxShadow: `0 0 6px ${brick.color}` }"
+                />
+                <span class="welcome-screen__brick-points">{{ brick.points }} pts</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <button class="start-btn" @click="$emit('start')">
-        <span class="btn-text">START GAME</span>
-        <span class="btn-glow" />
+      <button class="welcome-screen__start-btn" @click="startGame">
+        <span class="welcome-screen__btn-text">START GAME</span>
+        <span class="welcome-screen__btn-glow" />
       </button>
     </div>
   </div>
 </template>
-
-<style scoped src="./WelcomeScreen.css"></style>

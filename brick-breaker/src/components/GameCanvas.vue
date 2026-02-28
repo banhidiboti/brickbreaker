@@ -127,14 +127,18 @@ const drawBall = () => {
   ctx.shadowBlur = 0
 }
 
+// Row 0 = top (red = 30pts) ... Row 5 = bottom (purple = 5pts)
 const BRICK_COLORS = [
-  ['#ff4466', '#cc1133'],
-  ['#ff7733', '#cc4400'],
-  ['#ffcc00', '#cc9900'],
-  ['#44ff88', '#00cc55'],
-  ['#44ccff', '#0099cc'],
-  ['#bb66ff', '#8833cc'],
+  ['#ff4466', '#cc1133'], // row 0 — red    — 30 pts
+  ['#ff7733', '#cc4400'], // row 1 — orange — 25 pts
+  ['#ffcc00', '#cc9900'], // row 2 — yellow — 20 pts
+  ['#44ff88', '#00cc55'], // row 3 — green  — 15 pts
+  ['#44ccff', '#0099cc'], // row 4 — blue   — 10 pts
+  ['#bb66ff', '#8833cc'], // row 5 — purple —  5 pts
 ]
+
+// Points awarded per row index
+const BRICK_POINTS = [30, 25, 20, 15, 10, 5]
 
 const drawBricks = () => {
   for (let c = 0; c < brickColumnCount; c++) {
@@ -210,7 +214,7 @@ const collisionDetection = () => {
       ) {
         ball.value.dy = -ball.value.dy
         b.status = 0
-        score.value += 10
+        score.value += BRICK_POINTS[r] ?? 10 // points based on row color
 
         const remaining = bricks.value.flat().filter(x => x.status === 1).length
         if (remaining === 0) {
