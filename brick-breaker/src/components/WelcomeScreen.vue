@@ -2,7 +2,7 @@
 import './WelcomeScreen.css'
 
 const emit = defineEmits(['start'])
-const startGame = () => emit('start')
+const startGame = (mode = 'classic') => emit('start', mode)
 
 const BRICK_SCORING = [
   { color: '#ff4466', label: 'Red',    points: 30 },
@@ -50,11 +50,19 @@ const BRICK_SCORING = [
         <div class="welcome-screen__rules">
           <div class="welcome-screen__rule">
             <span class="welcome-screen__rule-icon">💥</span>
-            <span>Break all bricks to win</span>
+            <span>Classic Mode: break all bricks to win</span>
+          </div>
+          <div class="welcome-screen__rule">
+            <span class="welcome-screen__rule-icon">⚪</span>
+            <span>White-outlined special bricks can spawn extra white balls when destroyed.</span>
           </div>
           <div class="welcome-screen__rule">
             <span class="welcome-screen__rule-icon">♥</span>
             <span>You have 3 lives. Your final score is multiplied by the number of lives you have left at the end.</span>
+          </div>
+          <div class="welcome-screen__rule">
+            <span class="welcome-screen__rule-icon">∞</span>
+            <span>Endless Mode runs until all 3 lives are gone. cleared color rows respawn.</span>
           </div>
           <div class="welcome-screen__rule welcome-screen__rule--scoring">
             <span class="welcome-screen__rule-icon">🏆</span>
@@ -75,10 +83,17 @@ const BRICK_SCORING = [
         </div>
       </div>
 
-      <button class="welcome-screen__start-btn" @click="startGame">
-        <span class="welcome-screen__btn-text">START GAME</span>
-        <span class="welcome-screen__btn-glow" />
-      </button>
+      <div class="welcome-screen__start-actions">
+        <button class="welcome-screen__start-btn" @click="startGame('classic')">
+          <span class="welcome-screen__btn-text">CLASSIC MODE</span>
+          <span class="welcome-screen__btn-glow" />
+        </button>
+
+        <button class="welcome-screen__start-btn welcome-screen__start-btn--secondary" @click="startGame('endless')">
+          <span class="welcome-screen__btn-text">ENDLESS MODE</span>
+          <span class="welcome-screen__btn-glow" />
+        </button>
+      </div>
     </div>
   </div>
 </template>

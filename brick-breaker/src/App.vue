@@ -2,13 +2,21 @@
 import { ref } from 'vue'
 import WelcomeScreen from './components/WelcomeScreen.vue'
 import GameCanvas from './components/GameCanvas.vue'
+import GameCanvasEndless from './components/GameCanvasEndless.vue'
 
 const gameStarted = ref(false)
+const gameMode = ref('classic')
+
+const startGame = (mode = 'classic') => {
+  gameMode.value = mode
+  gameStarted.value = true
+}
 </script>
 
 <template>
-  <WelcomeScreen v-if="!gameStarted" @start="gameStarted = true" />
-  <GameCanvas v-else @go-home="gameStarted = false" />
+  <WelcomeScreen v-if="!gameStarted" @start="startGame" />
+  <GameCanvas v-else-if="gameMode === 'classic'" key="classic" @go-home="gameStarted = false" />
+  <GameCanvasEndless v-else key="endless" @go-home="gameStarted = false" />
 </template>
 
 <style>

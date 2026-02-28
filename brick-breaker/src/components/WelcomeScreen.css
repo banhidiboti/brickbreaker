@@ -189,6 +189,14 @@
 
 /* ── Start Button ── */
 
+.welcome-screen__start-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  align-items: center;
+}
+
 .welcome-screen__start-btn {
   position: relative;
   padding: 18px 64px;
@@ -199,6 +207,10 @@
   overflow: hidden;
   transition: transform 0.2s;
   animation: pulse-border 2.5s ease-in-out infinite;
+}
+
+.welcome-screen__start-btn--secondary {
+  border-color: #44aaff;
 }
 
 .welcome-screen__start-btn:hover {

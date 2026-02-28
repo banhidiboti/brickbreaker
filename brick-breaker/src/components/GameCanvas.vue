@@ -1,7 +1,15 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+
+const props = defineProps({
+  mode: {
+    type: String,
+    default: 'classic'
+  }
+})
 
 const emit = defineEmits(['goHome'])
+const isEndlessMode = computed(() => props.mode === 'endless')
 const resumeGame = () => { paused.value = false }
 const togglePause = () => {
   if (!gameOver.value && !won.value) paused.value = !paused.value
@@ -121,6 +129,7 @@ const brickPadding = 5
 const brickOffsetTop = 55
 const brickOffsetLeft = 8
 const BONUS_BRICK_COUNT = 5
+const MAX_ENDLESS_BONUS_BALLS = 5
 
 const bricks = ref([])
 
@@ -221,7 +230,38 @@ const makeBricks = () => {
   return grid
 }
 
+const getRowBonusBricks = () => {
+  const baseChance = BONUS_BRICK_COUNT / (brickColumnCount * brickRowCount)
+  const count = Math.floor(baseChance * brickColumnCount)
+  return Math.max(1, count)
+}
+
+const refillRow = (rowIndex) => {
+  const bonusSpots = new Set()
+  const bonusCount = getRowBonusBricks()
+
+  while (bonusSpots.size < bonusCount) {
+    bonusSpots.add(Math.floor(Math.random() * brickColumnCount))
+  }
+
+  for (let c = 0; c < brickColumnCount; c++) {
+    bricks.value[c][rowIndex].status = 1
+    bricks.value[c][rowIndex].isBonus = bonusSpots.has(c)
+  }
+}
+
+const refillClearedRowsInEndless = () => {
+  if (!isEndlessMode.value) return
+
+  for (let r = 0; r < brickRowCount; r++) {
+    const isRowCleared = bricks.value.every(column => column[r].status === 0)
+    if (isRowCleared) refillRow(r)
+  }
+}
+
 const spawnBonusBall = (x, y) => {
+  if (isEndlessMode.value && bonusBalls.value.length >= MAX_ENDLESS_BONUS_BALLS) return
+
   bonusBalls.value.push({
     x,
     y,
@@ -234,6 +274,7 @@ const spawnBonusBall = (x, y) => {
 
 const initGame = () => {
   score.value = 0
+  finalScore.value = 0
   lives.value = 3
   gameOver.value = false
   paused.value = false
@@ -364,6 +405,8 @@ const draw = () => {
 // ── Logic ──────────────────────────────────────────────────────────────────
 
 const finishIfWon = () => {
+  if (isEndlessMode.value) return
+
   const remaining = bricks.value.flat().filter(x => x.status === 1).length
   if (remaining === 0) {
     won.value = true
@@ -398,6 +441,7 @@ const collisionDetection = (currentBall) => {
           spawnBonusBall(bx + brickWidth / 2, by + brickHeight / 2)
         }
 
+        refillClearedRowsInEndless()
         finishIfWon()
         return
       }
