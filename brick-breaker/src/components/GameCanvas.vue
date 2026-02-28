@@ -1,6 +1,16 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 
+const emit = defineEmits(['goHome'])
+const resumeGame = () => { paused.value = false }
+
+const goHome = () => {
+  paused.value = false
+  gameOver.value = false
+  cancelAnimationFrame(animationFrameId)
+  emit('goHome')
+}
+
 const canvas = ref(null)
 const score = ref(0)
 const lives = ref(3)
@@ -81,21 +91,8 @@ const initGame = () => {
 // ── Drawing ────────────────────────────────────────────────────────────────
 
 const drawBackground = () => {
-  const grad = ctx.createLinearGradient(0, 0, 0, HEIGHT)
-  grad.addColorStop(0, '#05051a')
-  grad.addColorStop(1, '#0a0a2e')
-  ctx.fillStyle = grad
-  ctx.fillRect(0, 0, WIDTH, HEIGHT)
-
-  // Subtle grid lines for depth effect
-  ctx.strokeStyle = 'rgba(60,80,180,0.08)'
-  ctx.lineWidth = 1
-  for (let x = 0; x < WIDTH; x += 32) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, HEIGHT); ctx.stroke()
-  }
-  for (let y = 0; y < HEIGHT; y += 32) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(WIDTH, y); ctx.stroke()
-  }
+  // Clear canvas — background and grid handled by CSS
+  ctx.clearRect(0, 0, WIDTH, HEIGHT)
 }
 
 const drawPaddle = () => {
@@ -183,17 +180,7 @@ const draw = () => {
   ctx.textAlign = 'right'
   ctx.fillText(`LIVES: ${'♥ '.repeat(lives.value).trim()}`, WIDTH - 14, 24)
 
-  if (paused.value && !gameOver.value && !won.value) {
-    ctx.fillStyle = 'rgba(0,0,0,0.55)'
-    ctx.fillRect(0, 0, WIDTH, HEIGHT)
-    ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 44px monospace'
-    ctx.textAlign = 'center'
-    ctx.fillText('PAUSED', WIDTH / 2, HEIGHT / 2 - 10)
-    ctx.font = '16px monospace'
-    ctx.fillStyle = '#aaa'
-    ctx.fillText('Press SPACE or ESC to continue', WIDTH / 2, HEIGHT / 2 + 30)
-  }
+
 }
 
 // ── Logic ──────────────────────────────────────────────────────────────────
@@ -338,7 +325,25 @@ onUnmounted(() => {
             <div class="panel-icon">{{ won ? '🏆' : '💀' }}</div>
             <h1>{{ won ? 'YOU WIN!' : 'GAME OVER' }}</h1>
             <p class="final-score">{{ score }} points</p>
-            <button class="btn" @click="initGame">New Game</button>
+            <div class="btn-group">
+              <button class="btn" @click="initGame">New Game</button>
+              <button v-if="!won" class="btn btn--secondary" @click="goHome">Main Menu</button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+
+      <!-- Pause overlay -->
+      <Transition name="fade">
+        <div v-if="paused && !gameOver && !won" class="overlay">
+          <div class="panel panel--pause">
+            <div class="panel-icon">⏸️</div>
+            <h1>PAUSED</h1>
+            <p class="pause-hint">Press SPACE or ESC to continue</p>
+            <div class="btn-group">
+              <button class="btn" @click="resumeGame">Resume</button>
+              <button class="btn btn--secondary" @click="goHome">Main Menu</button>
+            </div>
           </div>
         </div>
       </Transition>

@@ -7,10 +7,8 @@ const gameStarted = ref(false)
 </script>
 
 <template>
-  <Transition name="switch" mode="out-in">
-    <WelcomeScreen v-if="!gameStarted" @start="gameStarted = true" />
-    <GameCanvas v-else />
-  </Transition>
+  <WelcomeScreen v-if="!gameStarted" @start="gameStarted = true" />
+  <GameCanvas v-else @go-home="gameStarted = false" />
 </template>
 
 <style>
@@ -25,12 +23,4 @@ body {
   overflow: hidden;
 }
 
-.switch-enter-active,
-.switch-leave-active {
-  transition: opacity 0.4s ease;
-}
-.switch-enter-from,
-.switch-leave-to {
-  opacity: 0;
-}
 </style>
