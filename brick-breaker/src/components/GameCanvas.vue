@@ -17,6 +17,7 @@ const lives = ref(3)
 const gameOver = ref(false)
 const paused = ref(false)
 const won = ref(false)
+const finalScore = ref(0)
 
 let ctx = null
 let animationFrameId = null
@@ -60,9 +61,81 @@ const brickWidth = 42
 const brickHeight = 20
 const brickPadding = 5
 const brickOffsetTop = 55
-const brickOffsetLeft = 13
+const brickOffsetLeft = 8
 
 const bricks = ref([])
+
+// ── Particles ──────────────────────────────────────────────────────────────
+
+let particles = []
+
+const spawnParticles = (x, y, color) => {
+  for (let i = 0; i < 8; i++) {
+    const angle = (Math.PI * 2 / 8) * i + (Math.random() - 0.5) * 0.5
+    const speed = 1 + Math.random() * 2
+    particles.push({
+      x,
+      y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      alpha: 1,
+      radius: 2 + Math.random() * 2,
+      color
+    })
+  }
+}
+
+const updateParticles = () => {
+  particles = particles.filter(p => p.alpha > 0.05)
+  for (const p of particles) {
+    p.x += p.vx
+    p.y += p.vy
+    p.alpha -= 0.045
+    p.radius *= 0.95
+  }
+}
+
+const drawParticles = () => {
+  for (const p of particles) {
+    ctx.globalAlpha = p.alpha
+    ctx.fillStyle = p.color
+    ctx.shadowColor = p.color
+    ctx.shadowBlur = 6
+    ctx.beginPath()
+    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  ctx.globalAlpha = 1
+  ctx.shadowBlur = 0
+}
+
+// ── Ball Trail ─────────────────────────────────────────────────────────────
+
+let trail = []
+const TRAIL_LENGTH = 20
+
+const updateTrail = () => {
+  trail.push({ x: ball.value.x, y: ball.value.y })
+  if (trail.length > TRAIL_LENGTH) trail.shift()
+}
+
+const drawTrail = () => {
+  for (let i = 0; i < trail.length; i++) {
+    const alpha = (i / trail.length) * 0.4
+    const radius = ball.value.radius * (i / trail.length) * 0.7
+    ctx.globalAlpha = alpha
+    ctx.fillStyle = '#ffee44'
+    ctx.shadowColor = '#ffee44'
+    ctx.shadowBlur = 8
+    ctx.beginPath()
+    ctx.arc(trail[i].x, trail[i].y, radius, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  ctx.globalAlpha = 1
+  ctx.shadowBlur = 0
+}
+
+// ── Bricks ─────────────────────────────────────────────────────────────────
 
 const makeBricks = () =>
   Array.from({ length: brickColumnCount }, () =>
@@ -75,6 +148,8 @@ const initGame = () => {
   gameOver.value = false
   paused.value = false
   won.value = false
+  particles = []
+  trail = []
 
   paddle.value.x = WIDTH / 2 - 60
   paddle.value.movingLeft = false
@@ -91,7 +166,6 @@ const initGame = () => {
 // ── Drawing ────────────────────────────────────────────────────────────────
 
 const drawBackground = () => {
-  // Clear canvas — background and grid handled by CSS
   ctx.clearRect(0, 0, WIDTH, HEIGHT)
 }
 
@@ -134,7 +208,6 @@ const BRICK_COLORS = [
   ['#bb66ff', '#8833cc'], // row 5 — purple —  5 pts
 ]
 
-// Points awarded per row index
 const BRICK_POINTS = [30, 25, 20, 15, 10, 5]
 
 const drawBricks = () => {
@@ -156,7 +229,6 @@ const drawBricks = () => {
       ctx.roundRect(bx, by, brickWidth, brickHeight, 4)
       ctx.fill()
 
-      // Highlight shine on top of brick
       ctx.fillStyle = 'rgba(255,255,255,0.15)'
       ctx.beginPath()
       ctx.roundRect(bx + 3, by + 2, brickWidth - 6, 5, 2)
@@ -168,19 +240,19 @@ const drawBricks = () => {
 
 const draw = () => {
   drawBackground()
+  drawTrail()
+  drawParticles()
   drawBricks()
   drawPaddle()
   drawBall()
 
-  // Draw HUD (score + lives)
+  // Draw HUD
   ctx.fillStyle = 'rgba(0,255,200,0.85)'
   ctx.font = 'bold 15px monospace'
   ctx.textAlign = 'left'
   ctx.fillText(`SCORE: ${score.value}`, 14, 24)
   ctx.textAlign = 'right'
   ctx.fillText(`LIVES: ${'♥ '.repeat(lives.value).trim()}`, WIDTH - 14, 24)
-
-
 }
 
 // ── Logic ──────────────────────────────────────────────────────────────────
@@ -201,12 +273,17 @@ const collisionDetection = () => {
       ) {
         ball.value.dy = -ball.value.dy
         b.status = 0
-        score.value += BRICK_POINTS[r] ?? 10 // points based on row color
+        score.value += BRICK_POINTS[r] ?? 10
+
+        // Spawn small particles at brick center
+        spawnParticles(bx + brickWidth / 2, by + brickHeight / 2, BRICK_COLORS[r][0])
 
         const remaining = bricks.value.flat().filter(x => x.status === 1).length
         if (remaining === 0) {
           won.value = true
           gameOver.value = true
+          const multiplier = lives.value >= 2 ? lives.value : 1
+          finalScore.value = score.value * multiplier
         }
       }
     }
@@ -219,7 +296,10 @@ const update = () => {
   ball.value.x += ball.value.dx
   ball.value.y += ball.value.dy
 
-  // Wall collisions (left, right, top)
+  updateTrail()
+  updateParticles()
+
+  // Wall collisions
   if (ball.value.x + ball.value.radius > WIDTH || ball.value.x - ball.value.radius < 0) {
     ball.value.dx = -ball.value.dx
   }
@@ -227,7 +307,7 @@ const update = () => {
     ball.value.dy = Math.abs(ball.value.dy)
   }
 
-  // Paddle collision — reflect ball upward and adjust angle based on hit position
+  // Paddle collision
   const p = paddle.value
   const bl = ball.value
   if (
@@ -239,16 +319,17 @@ const update = () => {
     bl.dy = -Math.abs(bl.dy)
     const hitPos = (bl.x - (p.x + p.width / 2)) / (p.width / 2)
     bl.dx = hitPos * 4
-    // Clamp dx to prevent extreme angles
     bl.dx = Math.max(-5, Math.min(5, bl.dx))
   }
 
-  // Ball fell off the bottom — lose a life
+  // Ball fell off bottom
   if (ball.value.y + ball.value.radius > HEIGHT) {
     lives.value--
+    trail = []
     if (lives.value <= 0) {
       gameOver.value = true
       won.value = false
+      finalScore.value = score.value
     } else {
       ball.value.x = WIDTH / 2
       ball.value.y = HEIGHT - 100
@@ -257,7 +338,7 @@ const update = () => {
     }
   }
 
-  // Move paddle based on held keys
+  // Paddle movement
   if (p.movingLeft && p.x > 0) p.x -= p.speed
   if (p.movingRight && p.x + p.width < WIDTH) p.x += p.speed
 
@@ -304,9 +385,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- Fills the entire viewport -->
   <div class="screen">
-    <!-- Fixed 480x640 wrapper, scaled up via CSS transform -->
     <div
       class="canvas-wrapper"
       :style="{
@@ -324,7 +403,8 @@ onUnmounted(() => {
           <div class="panel" :class="won ? 'panel--win' : 'panel--lose'">
             <div class="panel-icon">{{ won ? '🏆' : '💀' }}</div>
             <h1>{{ won ? 'YOU WIN!' : 'GAME OVER' }}</h1>
-            <p class="final-score">{{ score }} points</p>
+            <p class="final-score">{{ finalScore }} points</p>
+            <p v-if="won && lives > 1" class="score-bonus">{{ score }} × {{ lives }} life bonus! 🎯</p>
             <div class="btn-group">
               <button class="btn" @click="initGame">New Game</button>
               <button v-if="!won" class="btn btn--secondary" @click="goHome">Main Menu</button>
@@ -342,6 +422,7 @@ onUnmounted(() => {
             <p class="pause-hint">Press SPACE or ESC to continue</p>
             <div class="btn-group">
               <button class="btn" @click="resumeGame">Resume</button>
+              <button class="btn btn--secondary" @click="initGame(); resumeGame()">New Game</button>
               <button class="btn btn--secondary" @click="goHome">Main Menu</button>
             </div>
           </div>
