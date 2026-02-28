@@ -21,6 +21,7 @@ const gameOver = ref(false)
 const paused = ref(false)
 const won = ref(false)
 const finalScore = ref(0)
+const bonusBalls = ref([])
 
 let ctx = null
 let animationFrameId = null
@@ -119,6 +120,7 @@ const brickHeight = 20
 const brickPadding = 5
 const brickOffsetTop = 55
 const brickOffsetLeft = 8
+const BONUS_BRICK_COUNT = 5
 
 const bricks = ref([])
 
@@ -170,22 +172,25 @@ const drawParticles = () => {
 
 let trail = []
 const TRAIL_LENGTH = 20
+const BONUS_TRAIL_LENGTH = 16
 
 const updateTrail = () => {
   trail.push({ x: ball.value.x, y: ball.value.y })
   if (trail.length > TRAIL_LENGTH) trail.shift()
 }
 
-const drawTrail = () => {
-  for (let i = 0; i < trail.length; i++) {
-    const alpha = (i / trail.length) * 0.4
-    const radius = ball.value.radius * (i / trail.length) * 0.7
+const drawTrail = (points, currentRadius, color, shadowColor) => {
+  if (!points.length) return
+
+  for (let i = 0; i < points.length; i++) {
+    const alpha = (i / points.length) * 0.4
+    const radius = currentRadius * (i / points.length) * 0.7
     ctx.globalAlpha = alpha
-    ctx.fillStyle = '#ffee44'
-    ctx.shadowColor = '#ffee44'
+    ctx.fillStyle = color
+    ctx.shadowColor = shadowColor
     ctx.shadowBlur = 8
     ctx.beginPath()
-    ctx.arc(trail[i].x, trail[i].y, radius, 0, Math.PI * 2)
+    ctx.arc(points[i].x, points[i].y, radius, 0, Math.PI * 2)
     ctx.fill()
   }
   ctx.globalAlpha = 1
@@ -194,10 +199,38 @@ const drawTrail = () => {
 
 // ── Bricks ─────────────────────────────────────────────────────────────────
 
-const makeBricks = () =>
-  Array.from({ length: brickColumnCount }, () =>
-    Array.from({ length: brickRowCount }, () => ({ status: 1 }))
+const makeBricks = () => {
+  const grid = Array.from({ length: brickColumnCount }, () =>
+    Array.from({ length: brickRowCount }, () => ({ status: 1, isBonus: false }))
   )
+
+  const positions = []
+  for (let c = 0; c < brickColumnCount; c++) {
+    for (let r = 0; r < brickRowCount; r++) {
+      positions.push({ c, r })
+    }
+  }
+
+  const count = Math.min(BONUS_BRICK_COUNT, positions.length)
+  for (let i = 0; i < count; i++) {
+    const randomIndex = Math.floor(Math.random() * positions.length)
+    const { c, r } = positions.splice(randomIndex, 1)[0]
+    grid[c][r].isBonus = true
+  }
+
+  return grid
+}
+
+const spawnBonusBall = (x, y) => {
+  bonusBalls.value.push({
+    x,
+    y,
+    radius: 7,
+    dx: (Math.random() > 0.5 ? 1 : -1) * 3.4,
+    dy: -3.4,
+    trail: []
+  })
+}
 
 const initGame = () => {
   score.value = 0
@@ -207,6 +240,7 @@ const initGame = () => {
   won.value = false
   particles = []
   trail = []
+  bonusBalls.value = []
 
   paddle.value.x = WIDTH / 2 - 60
   paddle.value.movingLeft = false
@@ -241,13 +275,12 @@ const drawPaddle = () => {
   ctx.shadowBlur = 0
 }
 
-const drawBall = () => {
-  const b = ball.value
-  ctx.shadowColor = '#ffee44'
+const drawBall = (b, innerColor, outerColor, shadowColor) => {
+  ctx.shadowColor = shadowColor
   ctx.shadowBlur = 24
   const grad = ctx.createRadialGradient(b.x - 2, b.y - 2, 1, b.x, b.y, b.radius)
-  grad.addColorStop(0, '#fffbe0')
-  grad.addColorStop(1, '#ffcc00')
+  grad.addColorStop(0, innerColor)
+  grad.addColorStop(1, outerColor)
   ctx.fillStyle = grad
   ctx.beginPath()
   ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2)
@@ -290,6 +323,15 @@ const drawBricks = () => {
       ctx.beginPath()
       ctx.roundRect(bx + 3, by + 2, brickWidth - 6, 5, 2)
       ctx.fill()
+
+      if (bricks.value[c][r].isBonus) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.95)'
+        ctx.lineWidth = 1.2
+        ctx.beginPath()
+        ctx.roundRect(bx + 0.8, by + 0.8, brickWidth - 1.6, brickHeight - 1.6, 4)
+        ctx.stroke()
+      }
+
       ctx.shadowBlur = 0
     }
   }
@@ -297,11 +339,17 @@ const drawBricks = () => {
 
 const draw = () => {
   drawBackground()
-  drawTrail()
+  drawTrail(trail, ball.value.radius, '#ffee44', '#ffee44')
+  for (const whiteBall of bonusBalls.value) {
+    drawTrail(whiteBall.trail, whiteBall.radius, '#ffffff', '#ffffff')
+  }
   drawParticles()
   drawBricks()
   drawPaddle()
-  drawBall()
+  drawBall(ball.value, '#fffbe0', '#ffcc00', '#ffee44')
+  for (const whiteBall of bonusBalls.value) {
+    drawBall(whiteBall, '#ffffff', '#e9e9ff', '#ffffff')
+  }
 
   // Draw HUD
   ctx.fillStyle = 'rgba(0,255,200,0.85)'
@@ -315,7 +363,17 @@ const draw = () => {
 
 // ── Logic ──────────────────────────────────────────────────────────────────
 
-const collisionDetection = () => {
+const finishIfWon = () => {
+  const remaining = bricks.value.flat().filter(x => x.status === 1).length
+  if (remaining === 0) {
+    won.value = true
+    gameOver.value = true
+    const multiplier = lives.value >= 2 ? lives.value : 1
+    finalScore.value = score.value * multiplier
+  }
+}
+
+const collisionDetection = (currentBall) => {
   for (let c = 0; c < brickColumnCount; c++) {
     for (let r = 0; r < brickRowCount; r++) {
       const b = bricks.value[c][r]
@@ -324,27 +382,48 @@ const collisionDetection = () => {
       const by = r * (brickHeight + brickPadding) + brickOffsetTop
 
       if (
-        ball.value.x > bx &&
-        ball.value.x < bx + brickWidth &&
-        ball.value.y > by &&
-        ball.value.y < by + brickHeight
+        currentBall.x > bx &&
+        currentBall.x < bx + brickWidth &&
+        currentBall.y > by &&
+        currentBall.y < by + brickHeight
       ) {
-        ball.value.dy = -ball.value.dy
+        currentBall.dy = -currentBall.dy
         b.status = 0
         score.value += BRICK_POINTS[r] ?? 10
 
         // Spawn small particles at brick center
         spawnParticles(bx + brickWidth / 2, by + brickHeight / 2, BRICK_COLORS[r][0])
 
-        const remaining = bricks.value.flat().filter(x => x.status === 1).length
-        if (remaining === 0) {
-          won.value = true
-          gameOver.value = true
-          const multiplier = lives.value >= 2 ? lives.value : 1
-          finalScore.value = score.value * multiplier
+        if (b.isBonus) {
+          spawnBonusBall(bx + brickWidth / 2, by + brickHeight / 2)
         }
+
+        finishIfWon()
+        return
       }
     }
+  }
+}
+
+const applyBallWallAndPaddleCollisions = (currentBall) => {
+  if (currentBall.x + currentBall.radius > WIDTH || currentBall.x - currentBall.radius < 0) {
+    currentBall.dx = -currentBall.dx
+  }
+  if (currentBall.y - currentBall.radius < 0) {
+    currentBall.dy = Math.abs(currentBall.dy)
+  }
+
+  const p = paddle.value
+  if (
+    currentBall.y + currentBall.radius > p.y &&
+    currentBall.y - currentBall.radius < p.y + p.height &&
+    currentBall.x > p.x &&
+    currentBall.x < p.x + p.width
+  ) {
+    currentBall.dy = -Math.abs(currentBall.dy)
+    const hitPos = (currentBall.x - (p.x + p.width / 2)) / (p.width / 2)
+    currentBall.dx = hitPos * 4
+    currentBall.dx = Math.max(-5, Math.min(5, currentBall.dx))
   }
 }
 
@@ -353,31 +432,19 @@ const update = () => {
 
   ball.value.x += ball.value.dx
   ball.value.y += ball.value.dy
+  for (const whiteBall of bonusBalls.value) {
+    whiteBall.x += whiteBall.dx
+    whiteBall.y += whiteBall.dy
+    whiteBall.trail.push({ x: whiteBall.x, y: whiteBall.y })
+    if (whiteBall.trail.length > BONUS_TRAIL_LENGTH) whiteBall.trail.shift()
+  }
 
   updateTrail()
   updateParticles()
 
-  // Wall collisions
-  if (ball.value.x + ball.value.radius > WIDTH || ball.value.x - ball.value.radius < 0) {
-    ball.value.dx = -ball.value.dx
-  }
-  if (ball.value.y - ball.value.radius < 0) {
-    ball.value.dy = Math.abs(ball.value.dy)
-  }
-
-  // Paddle collision
-  const p = paddle.value
-  const bl = ball.value
-  if (
-    bl.y + bl.radius > p.y &&
-    bl.y - bl.radius < p.y + p.height &&
-    bl.x > p.x &&
-    bl.x < p.x + p.width
-  ) {
-    bl.dy = -Math.abs(bl.dy)
-    const hitPos = (bl.x - (p.x + p.width / 2)) / (p.width / 2)
-    bl.dx = hitPos * 4
-    bl.dx = Math.max(-5, Math.min(5, bl.dx))
+  applyBallWallAndPaddleCollisions(ball.value)
+  for (const whiteBall of bonusBalls.value) {
+    applyBallWallAndPaddleCollisions(whiteBall)
   }
 
   // Ball fell off bottom
@@ -396,11 +463,18 @@ const update = () => {
     }
   }
 
+  // Bonus white balls fell off bottom: remove them (no life loss, no respawn)
+  bonusBalls.value = bonusBalls.value.filter(whiteBall => whiteBall.y - whiteBall.radius <= HEIGHT)
+
   // Paddle movement
+  const p = paddle.value
   if (p.movingLeft && p.x > 0) p.x -= p.speed
   if (p.movingRight && p.x + p.width < WIDTH) p.x += p.speed
 
-  collisionDetection()
+  collisionDetection(ball.value)
+  for (const whiteBall of bonusBalls.value) {
+    collisionDetection(whiteBall)
+  }
 }
 
 const gameLoop = () => {
@@ -483,7 +557,7 @@ onUnmounted(() => {
             <p v-if="won && lives > 1" class="score-bonus">{{ score }} × {{ lives }} life bonus! 🎯</p>
             <div class="btn-group">
               <button class="btn" @click="initGame">New Game</button>
-              <button v-if="!won" class="btn btn--secondary" @click="goHome">Main Menu</button>
+              <button class="btn btn--secondary" @click="goHome">Main Menu</button>
             </div>
           </div>
         </div>
