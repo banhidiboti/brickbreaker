@@ -42,6 +42,11 @@
     0 0 0 1px rgba(0, 120, 255, 0.1);
 }
 
+.canvas-wrapper canvas {
+  display: block;
+  touch-action: none;
+}
+
 /* ── Overlay (game over / win) ── */
 
 .overlay {
@@ -185,4 +190,25 @@
   color: rgba(255, 220, 0, 0.7);
   margin: -20px 0 24px;
   letter-spacing: 1px;
+}
+
+/* ── Small-screen HUD pause button ── */
+.hud-pause-btn {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  z-index: 5;
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1px solid rgba(0, 240, 255, 0.55);
+  background: rgba(0, 30, 70, 0.72);
+  color: rgba(0, 255, 200, 0.95);
+  font-family: monospace;
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+
+.hud-pause-btn:hover {
+  background: rgba(0, 55, 120, 0.8);
 }

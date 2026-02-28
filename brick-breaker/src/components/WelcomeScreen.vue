@@ -54,7 +54,7 @@ const BRICK_SCORING = [
           </div>
           <div class="welcome-screen__rule">
             <span class="welcome-screen__rule-icon">♥</span>
-            <span>You have 3 lives — don't let the ball fall!</span>
+            <span>You have 3 lives. Your final score is multiplied by the number of lives you have left at the end.</span>
           </div>
           <div class="welcome-screen__rule welcome-screen__rule--scoring">
             <span class="welcome-screen__rule-icon">🏆</span>

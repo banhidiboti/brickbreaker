@@ -161,16 +161,10 @@
 
 .welcome-screen__rule--scoring {
   display: flex;
-  flex-direction: row !important;
-  align-items: center !important;
+  flex-direction: row;
+  align-items: center;
   justify-content: center;
-  gap: 12px;
-}
-
-.welcome-screen__rule--scoring .welcome-screen__rule-icon {
-  font-size: 1.4rem;
-  flex-shrink: 0;
-  display: block;
+  gap: 16px;
 }
 
 .welcome-screen__scoring-row {
@@ -211,10 +205,6 @@
   transform: translateY(-3px);
 }
 
-.welcome-screen__start-btn:hover .welcome-screen__btn-glow {
-  opacity: 1;
-}
-
 .welcome-screen__btn-text {
   position: relative;
   z-index: 1;
@@ -233,6 +223,10 @@
   box-shadow: 0 0 30px rgba(0, 240, 255, 0.3);
   opacity: 0;
   transition: opacity 0.3s;
+}
+
+.welcome-screen__start-btn:hover .welcome-screen__btn-glow {
+  opacity: 1;
 }
 
 @keyframes pulse-border {

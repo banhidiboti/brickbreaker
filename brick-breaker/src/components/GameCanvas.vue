@@ -3,6 +3,9 @@ import { ref, onMounted, onUnmounted } from 'vue'
 
 const emit = defineEmits(['goHome'])
 const resumeGame = () => { paused.value = false }
+const togglePause = () => {
+  if (!gameOver.value && !won.value) paused.value = !paused.value
+}
 
 const goHome = () => {
   paused.value = false
@@ -25,14 +28,68 @@ let animationFrameId = null
 // Internal game resolution — all logic runs at these coordinates
 const WIDTH = 480
 const HEIGHT = 640
+const HUD_PAUSE_BREAKPOINT = 900
 
 // Scale factor: fit the game into the window while keeping aspect ratio
 const scale = ref(1)
+const showHudPause = ref(false)
+let draggingPaddle = false
+let activePointerId = null
 
 const updateScale = () => {
   const scaleX = window.innerWidth / WIDTH
   const scaleY = window.innerHeight / HEIGHT
   scale.value = Math.min(scaleX, scaleY)
+  showHudPause.value = window.innerWidth <= HUD_PAUSE_BREAKPOINT
+}
+
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
+
+const getGameCoordsFromPointer = (event) => {
+  const rect = canvas.value.getBoundingClientRect()
+  const x = (event.clientX - rect.left) * (WIDTH / rect.width)
+  const y = (event.clientY - rect.top) * (HEIGHT / rect.height)
+  return { x, y }
+}
+
+const onPointerDown = (event) => {
+  if (gameOver.value || won.value) return
+
+  const { x, y } = getGameCoordsFromPointer(event)
+  const p = paddle.value
+  const isOnPaddle =
+    x >= p.x &&
+    x <= p.x + p.width &&
+    y >= p.y - 10 &&
+    y <= p.y + p.height + 10
+
+  if (!isOnPaddle) return
+
+  draggingPaddle = true
+  activePointerId = event.pointerId
+  p.movingLeft = false
+  p.movingRight = false
+  p.x = clamp(x - p.width / 2, 0, WIDTH - p.width)
+  canvas.value?.setPointerCapture?.(event.pointerId)
+}
+
+const onPointerMove = (event) => {
+  if (!draggingPaddle || activePointerId !== event.pointerId) return
+
+  const { x } = getGameCoordsFromPointer(event)
+  const p = paddle.value
+  p.movingLeft = false
+  p.movingRight = false
+  p.x = clamp(x - p.width / 2, 0, WIDTH - p.width)
+}
+
+const onPointerUp = (event) => {
+  if (activePointerId !== event.pointerId) return
+  draggingPaddle = false
+  activePointerId = null
+  paddle.value.movingLeft = false
+  paddle.value.movingRight = false
+  canvas.value?.releasePointerCapture?.(event.pointerId)
 }
 
 // ── Game State ─────────────────────────────────────────────────────────────
@@ -252,7 +309,8 @@ const draw = () => {
   ctx.textAlign = 'left'
   ctx.fillText(`SCORE: ${score.value}`, 14, 24)
   ctx.textAlign = 'right'
-  ctx.fillText(`LIVES: ${'♥ '.repeat(lives.value).trim()}`, WIDTH - 14, 24)
+  const livesTextRight = showHudPause.value ? 108 : 14
+  ctx.fillText(`LIVES: ${'♥ '.repeat(lives.value).trim()}`, WIDTH - livesTextRight, 24)
 }
 
 // ── Logic ──────────────────────────────────────────────────────────────────
@@ -395,7 +453,25 @@ onUnmounted(() => {
         transformOrigin: 'center center',
       }"
     >
-      <canvas ref="canvas" :width="480" :height="640" />
+      <canvas
+        ref="canvas"
+        :width="480"
+        :height="640"
+        @pointerdown="onPointerDown"
+        @pointermove="onPointerMove"
+        @pointerup="onPointerUp"
+        @pointercancel="onPointerUp"
+        @pointerleave="onPointerUp"
+      />
+
+      <button
+        v-if="showHudPause && !gameOver && !won"
+        class="hud-pause-btn"
+        type="button"
+        @click="togglePause"
+      >
+        {{ paused ? 'RESUME' : 'PAUSE' }}
+      </button>
 
       <!-- Game Over / Win overlay -->
       <Transition name="fade">
