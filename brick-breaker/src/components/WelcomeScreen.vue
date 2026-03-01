@@ -1,7 +1,7 @@
 <script setup>
 import './WelcomeScreen.css'
 
-const emit = defineEmits(['start'])
+const emit = defineEmits(['start', 'back'])
 const startGame = (mode = 'classic') => emit('start', mode)
 
 const BRICK_SCORING = [
@@ -91,6 +91,11 @@ const BRICK_SCORING = [
 
         <button class="welcome-screen__start-btn welcome-screen__start-btn--secondary" @click="startGame('endless')">
           <span class="welcome-screen__btn-text">ENDLESS MODE</span>
+          <span class="welcome-screen__btn-glow" />
+        </button>
+
+        <button class="welcome-screen__start-btn" @click="emit('back')">
+          <span class="welcome-screen__btn-text">BACK TO ARCADE</span>
           <span class="welcome-screen__btn-glow" />
         </button>
       </div>

@@ -25,11 +25,16 @@ const goHome = () => {
 const canvas = ref(null)
 const score = ref(0)
 const lives = ref(3)
+const clearedRowsCount = ref(0)
 const gameOver = ref(false)
 const paused = ref(false)
 const won = ref(false)
 const finalScore = ref(0)
 const bonusBalls = ref([])
+const level = computed(() => {
+  if (!isEndlessMode.value) return 1
+  return Math.floor(clearedRowsCount.value / brickRowCount) + 1
+})
 
 let ctx = null
 let animationFrameId = null
@@ -37,6 +42,7 @@ let animationFrameId = null
 // Internal game resolution — all logic runs at these coordinates
 const WIDTH = 480
 const HEIGHT = 640
+const HUD_HEIGHT = 42
 const HUD_PAUSE_BREAKPOINT = 900
 
 // Scale factor: fit the game into the window while keeping aspect ratio
@@ -253,9 +259,17 @@ const refillRow = (rowIndex) => {
 const refillClearedRowsInEndless = () => {
   if (!isEndlessMode.value) return
 
+  let refilledRows = 0
   for (let r = 0; r < brickRowCount; r++) {
     const isRowCleared = bricks.value.every(column => column[r].status === 0)
-    if (isRowCleared) refillRow(r)
+    if (isRowCleared) {
+      refillRow(r)
+      refilledRows++
+    }
+  }
+
+  if (refilledRows > 0) {
+    clearedRowsCount.value += refilledRows
   }
 }
 
@@ -276,6 +290,7 @@ const initGame = () => {
   score.value = 0
   finalScore.value = 0
   lives.value = 3
+  clearedRowsCount.value = 0
   gameOver.value = false
   paused.value = false
   won.value = false
@@ -378,8 +393,53 @@ const drawBricks = () => {
   }
 }
 
+const drawHUD = () => {
+  const hudBottomY = HUD_HEIGHT
+  const midY = 27
+
+  ctx.save()
+
+  ctx.fillStyle = 'rgba(2, 20, 48, 0.55)'
+  ctx.fillRect(0, 0, WIDTH, hudBottomY)
+
+  ctx.strokeStyle = 'rgba(0, 150, 255, 0.2)'
+  ctx.lineWidth = 1
+  ctx.beginPath()
+  ctx.moveTo(0, hudBottomY)
+  ctx.lineTo(WIDTH, hudBottomY)
+  ctx.stroke()
+
+  ctx.textAlign = 'left'
+  ctx.font = '700 16px Orbitron, sans-serif'
+  ctx.fillStyle = 'rgba(0, 240, 255, 0.55)'
+  ctx.fillText('SCORE: ', 16, midY)
+  const scoreLabelWidth = ctx.measureText('SCORE: ').width
+  ctx.fillStyle = '#00f0ff'
+  ctx.fillText(score.value, 16 + scoreLabelWidth, midY)
+
+  ctx.textAlign = 'center'
+  ctx.font = '700 14px Orbitron, sans-serif'
+  ctx.fillStyle = 'rgba(0, 240, 255, 0.55)'
+  ctx.fillText('LIVES: ', WIDTH / 2 - 16, midY)
+  ctx.fillStyle = '#00f0ff'
+  ctx.fillText(`${'♥ '.repeat(lives.value).trim() || '0'}`, WIDTH / 2 + 34, midY)
+
+  const rightPadding = showHudPause.value ? 108 : 16
+  const levelValue = String(level.value)
+  ctx.textAlign = 'right'
+  ctx.font = '700 16px Orbitron, sans-serif'
+  const levelValueWidth = ctx.measureText(levelValue).width
+  ctx.fillStyle = 'rgba(0, 240, 255, 0.55)'
+  ctx.fillText('LEVEL: ', WIDTH - rightPadding - levelValueWidth, midY)
+  ctx.fillStyle = '#00f0ff'
+  ctx.fillText(levelValue, WIDTH - rightPadding, midY)
+
+  ctx.restore()
+}
+
 const draw = () => {
   drawBackground()
+  drawHUD()
   drawTrail(trail, ball.value.radius, '#ffee44', '#ffee44')
   for (const whiteBall of bonusBalls.value) {
     drawTrail(whiteBall.trail, whiteBall.radius, '#ffffff', '#ffffff')
@@ -391,15 +451,6 @@ const draw = () => {
   for (const whiteBall of bonusBalls.value) {
     drawBall(whiteBall, '#ffffff', '#e9e9ff', '#ffffff')
   }
-
-  // Draw HUD
-  ctx.fillStyle = 'rgba(0,255,200,0.85)'
-  ctx.font = 'bold 15px monospace'
-  ctx.textAlign = 'left'
-  ctx.fillText(`SCORE: ${score.value}`, 14, 24)
-  ctx.textAlign = 'right'
-  const livesTextRight = showHudPause.value ? 108 : 14
-  ctx.fillText(`LIVES: ${'♥ '.repeat(lives.value).trim()}`, WIDTH - livesTextRight, 24)
 }
 
 // ── Logic ──────────────────────────────────────────────────────────────────
@@ -453,7 +504,8 @@ const applyBallWallAndPaddleCollisions = (currentBall) => {
   if (currentBall.x + currentBall.radius > WIDTH || currentBall.x - currentBall.radius < 0) {
     currentBall.dx = -currentBall.dx
   }
-  if (currentBall.y - currentBall.radius < 0) {
+  if (currentBall.y - currentBall.radius < HUD_HEIGHT) {
+    currentBall.y = HUD_HEIGHT + currentBall.radius
     currentBall.dy = Math.abs(currentBall.dy)
   }
 

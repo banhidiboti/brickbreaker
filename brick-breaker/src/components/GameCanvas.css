@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap');
+
 /* ── Full screen background with animated grid (same as welcome screen) ── */
 
 .screen {
@@ -88,7 +90,7 @@
 .panel h1 {
   margin: 0 0 12px;
   font-size: 2.4rem;
-  font-family: monospace;
+  font-family: 'Orbitron', sans-serif;
   letter-spacing: 4px;
   color: #fff;
 }
@@ -98,7 +100,7 @@
 
 .final-score {
   font-size: 1.8rem;
-  font-family: monospace;
+  font-family: 'Share Tech Mono', monospace;
   color: #00ffcc;
   margin: 0 0 32px;
 }
@@ -108,7 +110,7 @@
 .btn {
   padding: 14px 44px;
   font-size: 1.1rem;
-  font-family: monospace;
+  font-family: 'Orbitron', sans-serif;
   letter-spacing: 2px;
   background: transparent;
   color: #fff;
@@ -177,7 +179,7 @@
 
 .pause-hint {
   font-size: 0.9rem;
-  font-family: monospace;
+  font-family: 'Share Tech Mono', monospace;
   color: rgba(255, 255, 255, 0.4);
   margin: 0 0 28px;
   letter-spacing: 1px;
@@ -186,7 +188,7 @@
 /* ── Score bonus line ── */
 .score-bonus {
   font-size: 1rem;
-  font-family: monospace;
+  font-family: 'Share Tech Mono', monospace;
   color: rgba(255, 220, 0, 0.7);
   margin: -20px 0 24px;
   letter-spacing: 1px;
@@ -203,7 +205,7 @@
   border: 1px solid rgba(0, 240, 255, 0.55);
   background: rgba(0, 30, 70, 0.72);
   color: rgba(0, 255, 200, 0.95);
-  font-family: monospace;
+  font-family: 'Share Tech Mono', monospace;
   font-size: 0.7rem;
   letter-spacing: 1px;
   cursor: pointer;

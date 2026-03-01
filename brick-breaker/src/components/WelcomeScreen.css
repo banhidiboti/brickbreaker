@@ -207,6 +207,7 @@
   overflow: hidden;
   transition: transform 0.2s;
   animation: pulse-border 2.5s ease-in-out infinite;
+  width: 100%;
 }
 
 .welcome-screen__start-btn--secondary {
